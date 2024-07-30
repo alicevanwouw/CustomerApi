@@ -1,5 +1,7 @@
 ﻿using CustomerApi.Data;
+using CustomerApi.DTOs;
 using CustomerApi.Models;
+using CustomerApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -12,112 +14,71 @@ namespace CustomerApi.Controllers
     [ApiController]
     public class CustomerController : Controller
     {
-        private ApplicationDbContext _context;
+        private ICustomerService _customerService;
 
-        public CustomerController(ApplicationDbContext context)
+        public CustomerController(ICustomerService customerService)
         {
-            _context = context;
+            _customerService = customerService;
         }
 
         //Retrieve all Customers
         [HttpGet]
-        public IActionResult Get()
+        public async Task<IActionResult> GetAll()
         {
-            return Json(_context.Customer.ToList());
+            var users = await _customerService.GetAllCustomersAsync();
+            return Ok(users);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var customer = await _customerService.GetCustomerByIdAsync(id);
+            if (customer == null)
+            {
+                return NotFound();
+            }
+            return Ok(customer);
         }
 
         //Update a Customer's details
         [HttpPut]
-        public async Task<IActionResult> Put(string id, string values)
+        public async Task<IActionResult> Update(string id, CustomerDTO customerDto)
         {
-            var customer = await _context.Customer
-                .FirstOrDefaultAsync(u => u.Id.Equals(Guid.Parse(id)));
+            if (customerDto == null)
+            {
+                return BadRequest();
+            }
 
-            if (customer == null)
-                return StatusCode(409, "Customer not found");
+            var updatedUser = await _customerService.UpdateCustomerAsync(id, customerDto);
 
-            var valuesDict = JsonConvert.DeserializeObject<IDictionary>(values);
-            PopulateCustomerModel(customer, valuesDict);
+            if (updatedUser == null)
+            {
+                return NotFound();
+            }
 
-            _context.Customer.Update(customer);
-
-            await _context.SaveChangesAsync();
-            return Ok();
-
+            return Ok(updatedUser);
         }
 
         //Add a new Cusomer
         [HttpPost]
-        public async Task<IActionResult> Post(string values)
+        public async Task<IActionResult> Post(CustomerDTO customerDTO)
         {
-            var customer = new Customer();
-            customer.Id = Guid.NewGuid();
-            var valuesDict = JsonConvert.DeserializeObject<IDictionary>(values);
-            PopulateCustomerModel(customer, valuesDict);
-
-            var result = _context.Customer.Add(customer);
-            var newId = result.Entity.Id;
-            await _context.SaveChangesAsync();
-
-            return Json(newId);
+            var createdCustomer = await _customerService.CreateCustomerAsync(customerDTO);
+            return CreatedAtAction(nameof(GetById), new { id = createdCustomer.Id }, createdCustomer);
         }
 
         //Delete a Cusomer
         [HttpDelete]
         public async Task<IActionResult> Delete(string id)
         {
-            var customer = await _context.Customer
-               .FirstOrDefaultAsync(u => u.Id.Equals(Guid.Parse(id)));
-
+            var customer = await _customerService.GetCustomerByIdAsync(id);
             if (customer == null)
-                return StatusCode(409, "Customer not found");
-            
-            _context.Customer.Remove(customer);
-
-            await _context.SaveChangesAsync();
-
+            {
+                return NotFound();
+            }
+            var deletedCustomer = await _customerService.DeleteCustomerAsync(customer);
             return Ok();
         }
 
-
-        private void PopulateCustomerModel(Customer model, IDictionary values)
-        {
-            string ID = nameof(Models.Customer.Id);
-            string FIRST_NAME = nameof(Models.Customer.FirstName);
-            string SURNAME = nameof(Models.Customer.Surname);
-            string CELL_NUMBER = nameof(Models.Customer.CellNumber);
-            string PHYSICAL_ADDRESS = nameof(Models.Customer.PhysicalAddress);
-            string POSTAL_ADDRESS = nameof(Models.Customer.PostalAddress);
-
-            if (values.Contains(ID))
-            {
-                model.Id = Guid.Parse(values[ID].ToString());
-            }
-
-            if (values.Contains(FIRST_NAME))
-            {
-                model.FirstName = Convert.ToString(values[FIRST_NAME]);
-            }
-
-            if (values.Contains(SURNAME))
-            {
-                model.Surname = Convert.ToString(values[SURNAME]);
-            }
-
-            if (values.Contains(CELL_NUMBER))
-            {
-                model.CellNumber = Convert.ToString(values[CELL_NUMBER]);
-            }
-
-            if (values.Contains(PHYSICAL_ADDRESS))
-            {
-                model.PhysicalAddress = Convert.ToString(values[PHYSICAL_ADDRESS]);
-            }
-
-            if (values.Contains(POSTAL_ADDRESS))
-            {
-                model.PhysicalAddress = Convert.ToString(values[POSTAL_ADDRESS]);
-            }
-        }
     }
 }
