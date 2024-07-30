@@ -2,6 +2,7 @@
 using CustomerApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Collections;
 using System.Text.RegularExpressions;
 
@@ -35,6 +36,11 @@ namespace CustomerApi.Controllers
             if (customer == null)
                 return StatusCode(409, "Customer not found");
 
+            var valuesDict = JsonConvert.DeserializeObject<IDictionary>(values);
+            PopulateCustomerModel(customer, valuesDict);
+
+            _context.Customer.Update(customer);
+
             await _context.SaveChangesAsync();
             return Ok();
 
@@ -55,6 +61,24 @@ namespace CustomerApi.Controllers
 
             return Json(newId);
         }
+
+        //Delete a Cusomer
+        [HttpDelete]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var customer = await _context.Customer
+               .FirstOrDefaultAsync(u => u.Id.Equals(Guid.Parse(id)));
+
+            if (customer == null)
+                return StatusCode(409, "Customer not found");
+            
+            _context.Customer.Remove(customer);
+
+            await _context.SaveChangesAsync();
+
+            return Ok();
+        }
+
 
         private void PopulateCustomerModel(Customer model, IDictionary values)
         {
