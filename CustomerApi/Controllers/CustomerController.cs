@@ -12,9 +12,9 @@ namespace CustomerApi.Controllers
     [ApiController]
     public class CustomerController : Controller
     {
-        private CustomerContext _context;
+        private ApplicationDbContext _context;
 
-        public CustomerController(CustomerContext context)
+        public CustomerController(ApplicationDbContext context)
         {
             _context = context;
         }

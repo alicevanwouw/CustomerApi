@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 
 namespace CustomerApi.Data
 {
-    public class CustomerContext:DbContext
+    public class ApplicationDbContext:DbContext
     {
-        public CustomerContext(DbContextOptions<CustomerContext> options) : base(options)
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
         }
 
